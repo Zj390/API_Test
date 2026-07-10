@@ -1,0 +1,13 @@
+-
+  feature: 模块
+  story: 接口
+  title: 用例标题
+  request:
+    method: get
+    url: http://47.107.116.139/phpwind/
+    headers: null
+    params:
+
+      null
+
+  validate: null

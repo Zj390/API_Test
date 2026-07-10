@@ -1,0 +1,12 @@
+-
+  feature: 模块
+  story: 接口
+  title: 用例标题
+  request:
+    method: get
+    url: https://api.weixin.qq.com/cgi-bin/tags/get
+    headers: null
+    params:
+      access_token: access_token
+
+  validate: null
