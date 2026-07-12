@@ -8,6 +8,6 @@
     headers: null
     params:
       access_token: access_token
-    json: {"tag": {"id": 134, "name": "广东人"}}
+    json: {"tag": {"id": 8176, "name": "api_test_8176"}}
 
   validate: null

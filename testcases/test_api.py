@@ -39,7 +39,13 @@ class TestApi:
         datas["access_token"] = read_yaml("access_token")
 
         res = RequestUtil().send_all_request(method=methods, url=urls, params=datas)
-        print(res.json())
+        assert res.status_code == 200, f"HTTP状态码错误：{res.status_code}"
+
+        body = res.json()
+        print(body)
+        assert "tags" in body, f"响应中没有用tags字段：{body}"
+        assert isinstance(body["tags"], list), f"tags不是列表：{body}"
+
 
     # 编辑标签接口
     @pytest.mark.user
@@ -52,7 +58,15 @@ class TestApi:
         datas2 = caseinfo["request"]["json"]
 
         res = RequestUtil().send_all_request(method=methods, url=urls, json=datas2, params=datas1)
-        print(res.json())
+
+        assert res.status_code == 200, f"HTTP状态码错误：{res.status_code}"
+
+        body = res.json()
+
+        assert body.get("errcode") == 0, f"编辑标签失败：{body}"
+        # 这里是body.get("errcode")而不是body["errcode"]是因为
+        # 前者在errcode不存在时不会报错，只会返回None，而后者会报错，相当于同时判断是否存在
+        assert body.get("errmsg") == "ok", f"错误信息异常：{body}"
 
     # 访问phpwind首页接口
     @pytest.mark.smoke
@@ -63,7 +77,16 @@ class TestApi:
 
         res = RequestUtil().send_all_request(method=methods, url=urls)
 
-        write_yaml({"csrf_token": re.search('name="csrf_token" value="(.*?)"', res.text).group(1)})
+        assert res.status_code == 200, f"访问网页失败：{res.status_code}"
+
+        result = re.search(
+            'name="csrf_token" value="(.*?)"', res.text
+        )
+
+        assert result is not None, f"页面中没有找到csrf_token"
+        assert result.group(1), f"csrf_token不能为空"
+
+        write_yaml({"csrf_token": result.group(1)})
 
     # 登陆接口
     @pytest.mark.user
@@ -76,4 +99,9 @@ class TestApi:
         datas["csrf_token"] = read_yaml("csrf_token")
 
         res = RequestUtil().send_all_request(method=methods, url=urls, headers=headers, data=datas)
-        print(res.json())
+
+        assert res.status_code == 200, f"HTTP状态码错误：{res.status_code}"
+
+        body = res.json()
+
+        assert body.get("state") == "success", f"登陆失败：{body}"
