@@ -5,6 +5,7 @@ import pytest
 
 from commons.request_util import RequestUtil
 from commons.yaml_util import write_yaml, read_yaml, clear_yaml, read_yaml_testcase
+from commons.assert_util import AssertUtil
 
 class TestApi:
 
@@ -19,14 +20,9 @@ class TestApi:
 
         res = RequestUtil().send_all_request(method=methods, url=urls, params=datas)  # 使用统一封装
 
-        assert res.status_code == 200, f"HTTP状态码错误：{res.status_code}"
+        AssertUtil.validate_response(res, caseinfo.get("validate"))
 
         body = res.json()
-
-        assert "access_token" in body, f"获取token失败：{body}"
-        assert body["access_token"], f"access_token不能为空"
-        assert body.get("expires_in", 0) > 0, f"token有效期不正确：{body}"
-
         write_yaml({"access_token": body["access_token"]})
 
     # 查询标签接口
