@@ -17,7 +17,7 @@ class TestApi:
         urls = caseinfo["request"]["url"]
         datas = caseinfo["request"]["params"]
 
-        res = RequestUtil().send_all_requset(method=methods, url=urls, params=datas)  # 使用统一封装
+        res = RequestUtil().send_all_request(method=methods, url=urls, params=datas)  # 使用统一封装
 
         lis = jsonpath.jsonpath(res.json(), "$.access_token")  # '$'表示‘res.json()’的根
 
@@ -33,7 +33,7 @@ class TestApi:
         datas = caseinfo["request"]["params"]
         datas["access_token"] = read_yaml("access_token")
 
-        res = RequestUtil().send_all_requset(method=methods, url=urls, params=datas)
+        res = RequestUtil().send_all_request(method=methods, url=urls, params=datas)
         print(res.json())
 
     # 编辑标签接口
@@ -46,7 +46,7 @@ class TestApi:
         datas1["access_token"] = read_yaml("access_token")
         datas2 = caseinfo["request"]["json"]
 
-        res = RequestUtil().send_all_requset(method=methods, url=urls, json=datas2, params=datas1)
+        res = RequestUtil().send_all_request(method=methods, url=urls, json=datas2, params=datas1)
         print(res.json())
 
     # 访问phpwind首页接口
@@ -56,7 +56,7 @@ class TestApi:
         methods = caseinfo["request"]["method"]
         urls = caseinfo["request"]["url"]
 
-        res = RequestUtil().send_all_requset(method=methods, url=urls)
+        res = RequestUtil().send_all_request(method=methods, url=urls)
 
         write_yaml({"csrf_token": re.search('name="csrf_token" value="(.*?)"', res.text).group(1)})
 
@@ -70,5 +70,5 @@ class TestApi:
         datas = caseinfo["request"]["params"]
         datas["csrf_token"] = read_yaml("csrf_token")
 
-        res = RequestUtil().send_all_requset(method=methods, url=urls, headers=headers, data=datas)
+        res = RequestUtil().send_all_request(method=methods, url=urls, headers=headers, data=datas)
         print(res.json())
