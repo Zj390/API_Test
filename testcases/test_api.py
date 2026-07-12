@@ -19,10 +19,15 @@ class TestApi:
 
         res = RequestUtil().send_all_request(method=methods, url=urls, params=datas)  # 使用统一封装
 
-        lis = jsonpath.jsonpath(res.json(), "$.access_token")  # '$'表示‘res.json()’的根
+        assert res.status_code == 200, f"HTTP状态码错误：{res.status_code}"
 
-        if "access_token" in dict(res.json()).keys():
-            write_yaml({"access_token":res.json()["access_token"]}) # yaml存储（无需类变量）
+        body = res.json()
+
+        assert "access_token" in body, f"获取token失败：{body}"
+        assert body["access_token"], f"access_token不能为空"
+        assert body.get("expires_in", 0) > 0, f"token有效期不正确：{body}"
+
+        write_yaml({"access_token": body["access_token"]})
 
     # 查询标签接口
     @pytest.mark.user
