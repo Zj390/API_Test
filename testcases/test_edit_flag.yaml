@@ -10,4 +10,8 @@
       access_token: access_token
     json: {"tag": {"id": 8176, "name": "api_test_8176"}}
 
-  validate: null
+  validate:
+    status_code: 200
+    equals:
+      errcode: 0
+      errmsg: "ok"

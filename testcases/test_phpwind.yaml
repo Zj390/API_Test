@@ -10,4 +10,7 @@
 
       null
 
-  validate: null
+  validate:
+    status_code: 200
+    text_contains:
+      - csrf_token
