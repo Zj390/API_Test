@@ -5,6 +5,7 @@ import pytest
 
 from commons.request_util import RequestUtil
 from commons.yaml_util import write_yaml, read_yaml, clear_yaml, read_yaml_testcase
+from commons.assert_util import AssertUtil
 
 class TestApi:
 
@@ -19,38 +20,29 @@ class TestApi:
 
         res = RequestUtil().send_all_request(method=methods, url=urls, params=datas)  # 使用统一封装
 
-        assert res.status_code == 200, f"HTTP状态码错误：{res.status_code}"
+        AssertUtil.validate_response(res, caseinfo.get("validate"))
 
         body = res.json()
-
-        assert "access_token" in body, f"获取token失败：{body}"
-        assert body["access_token"], f"access_token不能为空"
-        assert body.get("expires_in", 0) > 0, f"token有效期不正确：{body}"
-
         write_yaml({"access_token": body["access_token"]})
 
     # 查询标签接口
     @pytest.mark.user
     @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_select_flag.yaml"))
-    def test_select_flag(self,caseinfo):
+    def test_select_flag(self, caseinfo):
         methods = caseinfo["request"]["method"]
         urls = caseinfo["request"]["url"]
         datas = caseinfo["request"]["params"]
         datas["access_token"] = read_yaml("access_token")
 
         res = RequestUtil().send_all_request(method=methods, url=urls, params=datas)
-        assert res.status_code == 200, f"HTTP状态码错误：{res.status_code}"
 
-        body = res.json()
-        print(body)
-        assert "tags" in body, f"响应中没有用tags字段：{body}"
-        assert isinstance(body["tags"], list), f"tags不是列表：{body}"
+        AssertUtil.validate_response(res, caseinfo.get("validate"))
 
 
     # 编辑标签接口
     @pytest.mark.user
     @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_edit_flag.yaml"))
-    def test_edit_flag(self,caseinfo):
+    def test_edit_flag(self, caseinfo):
         methods = caseinfo["request"]["method"]
         urls = caseinfo["request"]["url"]
         datas1 = caseinfo["request"]["params"]
@@ -59,14 +51,7 @@ class TestApi:
 
         res = RequestUtil().send_all_request(method=methods, url=urls, json=datas2, params=datas1)
 
-        assert res.status_code == 200, f"HTTP状态码错误：{res.status_code}"
-
-        body = res.json()
-
-        assert body.get("errcode") == 0, f"编辑标签失败：{body}"
-        # 这里是body.get("errcode")而不是body["errcode"]是因为
-        # 前者在errcode不存在时不会报错，只会返回None，而后者会报错，相当于同时判断是否存在
-        assert body.get("errmsg") == "ok", f"错误信息异常：{body}"
+        AssertUtil.validate_response(res, caseinfo.get("validate"))
 
     # 访问phpwind首页接口
     @pytest.mark.smoke
@@ -77,7 +62,7 @@ class TestApi:
 
         res = RequestUtil().send_all_request(method=methods, url=urls)
 
-        assert res.status_code == 200, f"访问网页失败：{res.status_code}"
+        AssertUtil.validate_response(res, caseinfo.get("validate"))
 
         result = re.search(
             'name="csrf_token" value="(.*?)"', res.text
@@ -100,8 +85,4 @@ class TestApi:
 
         res = RequestUtil().send_all_request(method=methods, url=urls, headers=headers, data=datas)
 
-        assert res.status_code == 200, f"HTTP状态码错误：{res.status_code}"
-
-        body = res.json()
-
-        assert body.get("state") == "success", f"登陆失败：{body}"
+        AssertUtil.validate_response(res, caseinfo.get("validate"))

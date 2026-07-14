@@ -14,4 +14,7 @@
       csrf_token: csrf_token
       backurl: http://47.107.116.139/phpwind/
       invite: ""
-  validate: null
+  validate:
+    status_code: 200
+    equals:
+      state: success

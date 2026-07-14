@@ -9,4 +9,9 @@
     params:
       access_token: access_token
 
-  validate: null
+  validate:
+    status_code: 200
+    exists:
+      - tags
+    types:
+      tags: list
