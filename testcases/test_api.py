@@ -6,6 +6,8 @@ import pytest
 from commons.request_util import RequestUtil
 from commons.yaml_util import write_yaml, read_yaml, clear_yaml, read_yaml_testcase
 from commons.assert_util import AssertUtil
+from commons.extract_util import ExtractUtil
+
 
 class TestApi:
 
@@ -22,8 +24,7 @@ class TestApi:
 
         AssertUtil.validate_response(res, caseinfo.get("validate"))
 
-        body = res.json()
-        write_yaml({"access_token": body["access_token"]})
+        ExtractUtil.extract_and_save(res, caseinfo.get("extract"))
 
     # 查询标签接口
     @pytest.mark.user
