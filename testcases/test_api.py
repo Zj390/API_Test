@@ -1,20 +1,16 @@
-import re
-import jsonpath as jsonpath
-import requests
 import pytest
 
 from commons.request_util import RequestUtil
-from commons.yaml_util import write_yaml, read_yaml, clear_yaml, read_yaml_testcase
+from commons.yaml_util import read_yaml, read_yaml_testcase
 from commons.assert_util import AssertUtil
 from commons.extract_util import ExtractUtil
 
 
 class TestApi:
 
-
     # 获取access_token鉴权码接口
     @pytest.mark.smoke
-    @pytest.mark.parametrize("caseinfo",read_yaml_testcase("testcases/test_get_token.yaml"))
+    @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_get_token.yaml"))
     def test_get_token(self, caseinfo):     # autouse=False时，如此插入夹具
         methods = caseinfo["request"]["method"]
         urls = caseinfo["request"]["url"]
@@ -39,7 +35,6 @@ class TestApi:
 
         AssertUtil.validate_response(res, caseinfo.get("validate"))
 
-
     # 编辑标签接口
     @pytest.mark.user
     @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_edit_flag.yaml"))
@@ -57,7 +52,7 @@ class TestApi:
     # 访问phpwind首页接口
     @pytest.mark.smoke
     @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_phpwind.yaml"))
-    def test_phpwind(self,caseinfo):
+    def test_phpwind(self, caseinfo):
         methods = caseinfo["request"]["method"]
         urls = caseinfo["request"]["url"]
 
@@ -65,19 +60,12 @@ class TestApi:
 
         AssertUtil.validate_response(res, caseinfo.get("validate"))
 
-        result = re.search(
-            'name="csrf_token" value="(.*?)"', res.text
-        )
-
-        assert result is not None, f"页面中没有找到csrf_token"
-        assert result.group(1), f"csrf_token不能为空"
-
-        write_yaml({"csrf_token": result.group(1)})
+        ExtractUtil.extract_and_save(res, caseinfo.get("extract"))
 
     # 登陆接口
     @pytest.mark.user
     @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_login.yaml"))
-    def test_login(self,caseinfo):
+    def test_login(self, caseinfo):
         methods = caseinfo["request"]["method"]
         urls = caseinfo["request"]["url"]
         headers = caseinfo["request"]["headers"]

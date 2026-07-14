@@ -1,3 +1,4 @@
+import re
 from commons.yaml_util import write_yaml
 
 
@@ -46,8 +47,35 @@ class ExtractUtil:
                 value = body[field]
 
             else:
-                # text来源下一步再实现
-                raise NotImplementedError("暂未实现text提取")
+                pattern = rule.get("regex")
+                group = rule.get("group", 1)
+
+                assert pattern, (
+                    f"{variable_name}缺少regex配置"
+                )
+
+                assert isinstance(group, int) and group >= 0, (
+                    f"{variable_name}的group必须是非负整数，"
+                    f"实际是：{group}"
+                )
+
+                try:
+                    result = re.search(pattern, response.text)
+                except re.error as error:
+                    raise AssertionError(
+                        f"{variable_name}正则表达式不合法：{error}"
+                    ) from error
+
+                assert result is not None, (
+                    f"正则表达式没有匹配到内容：{pattern}"
+                )
+
+                try:
+                    value = result.group(group)
+                except IndexError as error:
+                    raise AssertionError(
+                        f"{variable_name}不存在正则分组：{group}"
+                    ) from error
 
             assert value not in (None, {}, [], ""), (
                 f"提取结果不能为空：{variable_name}"
