@@ -18,3 +18,7 @@
       - access_token
     greater_than:
       expires_in: 0
+  extract:
+    access_token:
+      source: json
+      field: access_token

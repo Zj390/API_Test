@@ -37,7 +37,7 @@ class AssertUtil:
         expected_status = validate.get("status_code")
         if expected_status is not None:
             assert response.status_code == expected_status, (
-                f"HTTP状态码错误，预期：{expected_status}",
+                f"HTTP状态码错误，预期：{expected_status},"
                 f"实际：{response.status_code}"
             )
 
@@ -97,6 +97,6 @@ class AssertUtil:
                 f"不支持的类型名称：{expected_type_name}"
             )
             assert isinstance(body[field], expected_type), (
-                f"{field}类型错误，预期：{expected_type_name}",
+                f"{field}类型错误，预期：{expected_type_name},"
                 f"实际：{type(body[field]).__name__}"
             )

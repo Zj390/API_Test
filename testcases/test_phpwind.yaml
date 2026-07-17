@@ -14,3 +14,9 @@
     status_code: 200
     text_contains:
       - csrf_token
+
+  extract:
+    csrf_token:
+      source: text
+      regex: 'name="csrf_token" value="(.*?)"'
+      group: 1
