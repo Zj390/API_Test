@@ -7,7 +7,7 @@
     url: https://api.weixin.qq.com/cgi-bin/tags/get
     headers: null
     params:
-      access_token: access_token
+      access_token: ${access_token}
 
   validate:
     status_code: 200

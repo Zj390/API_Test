@@ -8,10 +8,10 @@
     headers:
       Accept: application/json, text/javascript, /; q=0.01
       X-Requested-With: XMLHttpRequest
-    params:
+    data:
       username: baili
       password: baili123
-      csrf_token: csrf_token
+      csrf_token: ${csrf_token}
       backurl: http://47.107.116.139/phpwind/
       invite: ""
   validate:

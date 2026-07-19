@@ -1,9 +1,10 @@
 import pytest
 
 from commons.request_util import RequestUtil
-from commons.yaml_util import read_yaml, read_yaml_testcase
+from commons.yaml_util import read_yaml_testcase
 from commons.assert_util import AssertUtil
 from commons.extract_util import ExtractUtil
+from commons.replace_util import ReplaceUtil
 
 
 class TestApi:
@@ -12,11 +13,9 @@ class TestApi:
     @pytest.mark.smoke
     @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_get_token.yaml"))
     def test_get_token(self, caseinfo):     # autouse=False时，如此插入夹具
-        methods = caseinfo["request"]["method"]
-        urls = caseinfo["request"]["url"]
-        datas = caseinfo["request"]["params"]
+        request_data = ReplaceUtil.replace_variables(caseinfo["request"])
 
-        res = RequestUtil().send_all_request(method=methods, url=urls, params=datas)  # 使用统一封装
+        res = RequestUtil().send_all_request(**request_data)  # 使用统一封装
 
         AssertUtil.validate_response(res, caseinfo.get("validate"))
 
@@ -26,12 +25,9 @@ class TestApi:
     @pytest.mark.user
     @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_select_flag.yaml"))
     def test_select_flag(self, caseinfo):
-        methods = caseinfo["request"]["method"]
-        urls = caseinfo["request"]["url"]
-        datas = caseinfo["request"]["params"]
-        datas["access_token"] = read_yaml("access_token")
+        request_data = ReplaceUtil.replace_variables(caseinfo["request"])
 
-        res = RequestUtil().send_all_request(method=methods, url=urls, params=datas)
+        res = RequestUtil().send_all_request(**request_data)
 
         AssertUtil.validate_response(res, caseinfo.get("validate"))
 
@@ -39,13 +35,9 @@ class TestApi:
     @pytest.mark.user
     @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_edit_flag.yaml"))
     def test_edit_flag(self, caseinfo):
-        methods = caseinfo["request"]["method"]
-        urls = caseinfo["request"]["url"]
-        datas1 = caseinfo["request"]["params"]
-        datas1["access_token"] = read_yaml("access_token")
-        datas2 = caseinfo["request"]["json"]
+        request_data = ReplaceUtil.replace_variables(caseinfo["request"])
 
-        res = RequestUtil().send_all_request(method=methods, url=urls, json=datas2, params=datas1)
+        res = RequestUtil().send_all_request(**request_data)
 
         AssertUtil.validate_response(res, caseinfo.get("validate"))
 
@@ -53,10 +45,9 @@ class TestApi:
     @pytest.mark.smoke
     @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_phpwind.yaml"))
     def test_phpwind(self, caseinfo):
-        methods = caseinfo["request"]["method"]
-        urls = caseinfo["request"]["url"]
+        request_data = ReplaceUtil.replace_variables(caseinfo["request"])
 
-        res = RequestUtil().send_all_request(method=methods, url=urls)
+        res = RequestUtil().send_all_request(**request_data)
 
         AssertUtil.validate_response(res, caseinfo.get("validate"))
 
@@ -66,12 +57,8 @@ class TestApi:
     @pytest.mark.user
     @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_login.yaml"))
     def test_login(self, caseinfo):
-        methods = caseinfo["request"]["method"]
-        urls = caseinfo["request"]["url"]
-        headers = caseinfo["request"]["headers"]
-        datas = caseinfo["request"]["params"]
-        datas["csrf_token"] = read_yaml("csrf_token")
+        request_data = ReplaceUtil.replace_variables(caseinfo["request"])
 
-        res = RequestUtil().send_all_request(method=methods, url=urls, headers=headers, data=datas)
+        res = RequestUtil().send_all_request(**request_data)
 
         AssertUtil.validate_response(res, caseinfo.get("validate"))
