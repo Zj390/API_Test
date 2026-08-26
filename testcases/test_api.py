@@ -1,11 +1,38 @@
 import pytest
 
 from commons.request_util import RequestUtil
-from commons.yaml_util import read_yaml_testcase
+from commons.yaml_util import read_all_yaml_testcases
 from commons.assert_util import AssertUtil
 from commons.extract_util import ExtractUtil
 from commons.replace_util import ReplaceUtil
 
+TESTCASE_PATHS = [      # 顺序不能随便改，因为存在依赖
+    "testcases/test_get_token.yaml",
+    "testcases/test_select_flag.yaml",
+    "testcases/test_edit_flag.yaml",
+    "testcases/test_phpwind.yaml",
+    "testcases/test_login.yaml",
+]
+
+def build_test_params():
+    # 构建带名称和 marker 的参数
+    test_params = []
+
+    for caseinfo in read_all_yaml_testcases(TESTCASE_PATHS):
+        marks = [
+            getattr(pytest.mark, mark_name)
+            for mark_name in caseinfo.get("marks", [])
+        ]
+
+        test_params.append(
+            pytest.param(
+                caseinfo,
+                marks=marks,
+                id=caseinfo["title"]
+            )
+        )
+
+    return test_params
 
 class TestApi:
 
@@ -29,32 +56,9 @@ class TestApi:
             caseinfo.get("extract")
         )
 
-    # 获取access_token鉴权码接口
-    @pytest.mark.smoke
-    @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_get_token.yaml"))
-    def test_get_token(self, caseinfo):     # autouse=False时，如此插入夹具
-        self.execute_case(caseinfo)
-
-    # 查询标签接口
-    @pytest.mark.user
-    @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_select_flag.yaml"))
-    def test_select_flag(self, caseinfo):
-        self.execute_case(caseinfo)
-
-    # 编辑标签接口
-    @pytest.mark.user
-    @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_edit_flag.yaml"))
-    def test_edit_flag(self, caseinfo):
-        self.execute_case(caseinfo)
-
-    # 访问phpwind首页接口
-    @pytest.mark.smoke
-    @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_phpwind.yaml"))
-    def test_phpwind(self, caseinfo):
-        self.execute_case(caseinfo)
-
-    # 登陆接口
-    @pytest.mark.user
-    @pytest.mark.parametrize("caseinfo", read_yaml_testcase("testcases/test_login.yaml"))
-    def test_login(self, caseinfo):
+    @pytest.mark.parametrize(
+        "caseinfo",
+        build_test_params()
+    )
+    def test_api(self, caseinfo):
         self.execute_case(caseinfo)

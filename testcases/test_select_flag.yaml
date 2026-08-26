@@ -1,7 +1,9 @@
 -
   feature: 模块
   story: 接口
-  title: 用例标题
+  title: 查询微信标签
+  marks:
+    - user
   request:
     method: get
     url: https://api.weixin.qq.com/cgi-bin/tags/get

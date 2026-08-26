@@ -23,3 +23,13 @@ def read_yaml_testcase(yamlpath):
     with open(os.getcwd() + "/" + yamlpath, encoding="utf-8", mode="r") as f:
         value = yaml.load(f, yaml.FullLoader)
         return value
+
+# 批量读取函数
+def read_all_yaml_testcases(yamlpaths):
+    all_testcases = []
+
+    for yamlpath in yamlpaths:
+        testcases = read_yaml_testcase(yamlpath)
+        all_testcases.extend(testcases)
+
+    return all_testcases

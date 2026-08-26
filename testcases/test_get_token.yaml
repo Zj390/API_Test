@@ -1,7 +1,9 @@
 -
   feature: 模块
   story: 接口
-  title: 用例标题
+  title: 获取微信access_token
+  marks:
+    - smoke
   request:
     method: get
     url: https://api.weixin.qq.com/cgi-bin/token
