@@ -1,7 +1,7 @@
 from commons.yaml_util import read_yaml
 
 
-class ReplaceUtil:
+class ReplaceUtil:  # 用来对于YAML用例上request部分数据进行提取
 
     @staticmethod
     def replace_variables(data):

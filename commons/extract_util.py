@@ -2,7 +2,7 @@ import re
 from commons.yaml_util import write_yaml
 
 
-class ExtractUtil:
+class ExtractUtil:  # 用来识别用例上需要提取并保存的数据，然后把它保存下来
 
     @staticmethod
     def extract_and_save(response, extract):
