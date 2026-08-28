@@ -88,3 +88,33 @@ def test_empty_variable_name():
         match="变量名不能为空"
     ):
         ReplaceUtil.replace_variables("${}")
+
+
+def test_replace_environment_variable(monkeypatch):
+    environment_variables = {
+        "WECHAT_APPID": "test-appid"
+    }
+
+    def fake_read_env(key):
+        return environment_variables[key]
+
+    # ReplaceUtil 使用的是导入到自身模块中的 ConfigUtil。
+    monkeypatch.setattr(
+        "commons.replace_util.ConfigUtil.read_env",
+        fake_read_env
+    )
+
+    original_data = {
+        "appid": "${env:WECHAT_APPID}"
+    }
+
+    result = ReplaceUtil.replace_variables(original_data)
+
+    assert result == {
+        "appid": "test-appid"
+    }
+
+    # 原始数据仍然不能被修改。
+    assert original_data == {
+        "appid": "${env:WECHAT_APPID}"
+    }

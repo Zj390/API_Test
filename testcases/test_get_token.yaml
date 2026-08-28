@@ -10,8 +10,8 @@
     headers: null
     params:
       grant_type: client_credential
-      appid: wx8a9de038e93f77ab
-      secret: 8326fc915928dee3165720c910effb86
+      appid: ${env:WECHAT_APPID}
+      secret: ${env:WECHAT_SECRET}
   validate:
     status_code: 200
     exists:           # 以此为名的字段要存在
