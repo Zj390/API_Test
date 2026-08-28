@@ -30,6 +30,7 @@ api_test_git/
 │   ├── assert_util.py          # 通用响应断言
 │   ├── config_util.py          # 环境变量读取
 │   ├── extract_util.py         # JSON、文本响应数据提取
+│   ├── path_util.py            # 项目根目录和公共文件路径
 │   ├── replace_util.py         # YAML请求变量递归替换
 │   ├── request_util.py         # HTTP请求统一封装
 │   └── yaml_util.py            # YAML读写及批量用例加载
@@ -42,7 +43,8 @@ api_test_git/
 │       ├── test_assert_util.py
 │       ├── test_config_util.py
 │       ├── test_extract_util.py
-│       └── test_replace_util.py
+│       ├── test_replace_util.py
+│       └── test_yaml_util.py
 ├── .env.example                # 环境变量示例，可提交
 ├── extract.yaml                # 运行时临时变量，不提交
 ├── pytest.ini                  # pytest配置与marker声明
@@ -162,6 +164,18 @@ password: ${env:PHPWIND_PASSWORD}
 
 `ReplaceUtil` 会递归处理嵌套字典和列表，并返回替换后的新数据，不直接修改原始 YAML 数据。
 
+### 路径与临时数据管理
+
+项目使用 `pathlib.Path` 根据源码文件位置确定项目根目录，不再依赖运行时的当前工作目录。
+
+因此无论从 `run.py`、单个测试文件还是其他目录启动测试，都能正确定位：
+
+- `.env`
+- `extract.yaml`
+- `testcases/*.yaml`
+
+写入临时变量时，会先读取原有数据，再通过 `dict.update()` 合并新变量并覆盖写回。这样同名变量会更新，其他变量仍然保留，不会在 YAML 中产生重复键。
+
 ### pytest标记
 
 当前已注册：
@@ -172,12 +186,13 @@ password: ${env:PHPWIND_PASSWORD}
 
 ### 工具单元测试
 
-当前共有 20 个单元测试：
+当前共有 26 个单元测试：
 
 - `ReplaceUtil`：递归替换、普通值、空变量名和环境变量替换。
 - `AssertUtil`：JSON、文本、状态码、业务值和错误规则检查。
 - `ExtractUtil`：JSON提取、正则提取及多种错误场景。
 - `ConfigUtil`：环境变量读取及缺失变量检查。
+- YAML工具：临时数据读写、同名变量覆盖、文件清空、错误参数和跨工作目录读取。
 
 单元测试通过 monkeypatch 隔离真实的 `.env` 和 `extract.yaml`，不会访问外部接口，也不会写入真实临时数据。
 
@@ -283,15 +298,13 @@ phpwind接口：
 - 接口用例依赖外部测试服务和网络状态。
 - 部分用例依赖固定执行顺序，不能直接并行运行。
 - 编辑标签用例会修改远端测试数据，目前没有自动恢复逻辑。
-- `yaml_util.py` 仍依赖当前工作目录定位文件。
 - 请求封装尚未统一增加超时、日志和敏感数据脱敏。
 - pytest-html 和 Allure 已列入依赖，但尚未配置正式报告流程。
 - 尚未配置 CI 自动执行单元测试。
 
 ## 后续计划
 
-1. 改进路径与 YAML 临时数据管理。
-2. 为 HTTP 请求增加超时、日志和敏感信息脱敏。
-3. 处理接口前置依赖、结果回查和测试数据恢复。
-4. 生成 HTML 或 Allure 测试报告。
-5. 配置 CI 自动运行单元测试。
+1. 为 HTTP 请求增加超时、日志和敏感信息脱敏。
+2. 处理接口前置依赖、结果回查和测试数据恢复。
+3. 生成 HTML 或 Allure 测试报告。
+4. 配置 CI 自动运行单元测试。
