@@ -1,11 +1,10 @@
 import os
-from pathlib import Path
 
 from dotenv import load_dotenv
 
+from commons.path_util import PROJECT_ROOT
 
-# config_util.py 位于 commons 中，向上两层得到项目根目录。
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
 ENV_FILE = PROJECT_ROOT / ".env"
 
 # 将 .env 中的配置加载到当前 Python 进程的环境变量中。
