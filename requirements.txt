@@ -1,4 +1,7 @@
 pytest
+requests
+PyYAML
+python-dotenv
 pytest-html
 pytest-xdist
 pytest-ordering

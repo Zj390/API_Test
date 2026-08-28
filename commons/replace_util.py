@@ -1,4 +1,5 @@
 from commons.yaml_util import read_yaml
+from commons.config_util import ConfigUtil
 
 
 class ReplaceUtil:  # 用来对于YAML用例上request部分数据进行提取
@@ -34,6 +35,13 @@ class ReplaceUtil:  # 用来对于YAML用例上request部分数据进行提取
             variable_name = data[2:-1]
 
             assert variable_name, f"变量名不能为空"
+
+            if variable_name.startswith("env:"):
+                environment_name = variable_name[4:]
+
+                assert environment_name, f"环境变量名不能为空"
+
+                return ConfigUtil.read_env(environment_name)
 
             return read_yaml(variable_name)
 
