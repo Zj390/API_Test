@@ -1,30 +1,67 @@
-import os
 import yaml
+from commons.path_util import EXTRACT_FILE, get_project_path
 
-# 可以用这种方法代替类变量这一中间变量
-# 写入：追加
+
+def _read_extract_data():
+    """读取 extract.yaml 中保存的全部临时变量。"""
+    if not EXTRACT_FILE.exists():
+        return {}
+
+    with EXTRACT_FILE.open(
+        encoding="utf-8",
+        mode="r"
+    ) as file:
+        return yaml.safe_load(file) or {}
+
+
 def write_yaml(data):
-    with open(os.getcwd()+"/extract.yaml", encoding="utf-8", mode="a+") as f:
-        yaml.dump(data, stream=f, allow_unicode=True)
+    """将新变量合并到 extract.yaml，并覆盖旧的同名变量。"""
+    assert isinstance(data, dict), "写入的数据必须是字典"
 
-# 读取
+    extract_data = _read_extract_data()
+    extract_data.update(data)
+
+    with EXTRACT_FILE.open(
+            encoding="utf-8",
+            mode="w"        # “w”模式会在写入前清空原文件
+    ) as file:
+        yaml.safe_dump(
+            extract_data,
+            stream=file,
+            allow_unicode=True,
+            sort_keys=False     # 不要让写入内容按字母排序
+        )
+
+
+# 从 extract.yaml 读取指定变量
 def read_yaml(key):
-    with open(os.getcwd()+"/extract.yaml", encoding="utf-8", mode="r") as f:
-        value = yaml.load(f, yaml.FullLoader)
-        return value[key]
+    """读取指定的临时变量。"""
+    extract_data = _read_extract_data()
+    return extract_data[key]
 
-# 清空
+
+# 清空 extract.yaml
 def clear_yaml():
-    with open(os.getcwd()+"/extract.yaml", encoding="utf-8", mode="w") as f:
-        f.truncate()
+    """清空运行过程中保存的临时变量。"""
+    EXTRACT_FILE.write_text(
+        "",
+        encoding="utf-8"
+    )
 
-# 读取测试用例
+
+# 从项目根目录读取测试用例
 def read_yaml_testcase(yamlpath):
-    with open(os.getcwd() + "/" + yamlpath, encoding="utf-8", mode="r") as f:
-        value = yaml.load(f, yaml.FullLoader)
+    testcase_path = get_project_path(yamlpath)
+
+    with testcase_path.open(
+        encoding="utf-8",
+        mode="r"
+    ) as file:
+        value = yaml.safe_load(file)
         return value
 
-# 批量读取函数
+
+# 按照给定顺序批量读取测试用例
 def read_all_yaml_testcases(yamlpaths):
     all_testcases = []
 
