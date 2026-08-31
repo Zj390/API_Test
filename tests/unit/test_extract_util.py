@@ -227,3 +227,108 @@ def test_unsupported_source(written_data):
         ExtractUtil.extract_and_save(response, extract)
 
     assert written_data == []
+
+
+def test_extract_json_list_item(written_data):
+    response = FakeResponse(
+        body={
+            "tags": [
+                {
+                    "id": 100,
+                    "name": "标签A"
+                },
+                {
+                    "id": 8176,
+                    "name": "原始标签"
+                }
+            ]
+        }
+    )
+
+    extract = {
+        "original_tag_name": {
+            "source": "json",
+            "field": "tags",
+            "match": {
+                "id": 8176
+            },
+            "value_field": "name"
+        }
+    }
+
+    ExtractUtil.extract_and_save(response, extract)
+
+    assert written_data == [
+        {
+            "original_tag_name": "原始标签"
+        }
+    ]
+
+
+def test_json_list_item_not_found(written_data):
+    response = FakeResponse(
+        body={
+            "tags": [
+                {
+                    "id": 100,
+                    "name": "标签A"
+                }
+            ]
+        }
+    )
+
+    extract = {
+        "original_tag_name": {
+            "source": "json",
+            "field": "tags",
+            "match": {
+                "id": 8176
+            },
+            "value_field": "name"
+        }
+    }
+
+    with pytest.raises(
+        AssertionError,
+        match="没有找到符合条件的数据"
+    ):
+        ExtractUtil.extract_and_save(
+            response,
+            extract
+        )
+
+    assert written_data == []
+
+
+def test_json_list_value_field_not_found(written_data):
+    response = FakeResponse(
+        body={
+            "tags": [
+                {
+                    "id": 8176
+                }
+            ]
+        }
+    )
+
+    extract = {
+        "original_tag_name": {
+            "source": "json",
+            "field": "tags",
+            "match": {
+                "id": 8176
+            },
+            "value_field": "name"
+        }
+    }
+
+    with pytest.raises(
+        AssertionError,
+        match="匹配结果中不存在字段"
+    ):
+        ExtractUtil.extract_and_save(
+            response,
+            extract
+        )
+
+    assert written_data == []
