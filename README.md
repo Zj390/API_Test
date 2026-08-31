@@ -30,6 +30,7 @@ api_test_git/
 │   ├── assert_util.py          # 通用响应断言
 │   ├── config_util.py          # 环境变量读取
 │   ├── extract_util.py         # JSON、文本响应数据提取
+│   ├── log_util.py             # 日志敏感字段递归脱敏
 │   ├── path_util.py            # 项目根目录和公共文件路径
 │   ├── replace_util.py         # YAML请求变量递归替换
 │   ├── request_util.py         # HTTP请求统一封装
@@ -43,7 +44,9 @@ api_test_git/
 │       ├── test_assert_util.py
 │       ├── test_config_util.py
 │       ├── test_extract_util.py
+│       ├── test_log_util.py
 │       ├── test_replace_util.py
+│       ├── test_request_util.py
 │       └── test_yaml_util.py
 ├── .env.example                # 环境变量示例，可提交
 ├── extract.yaml                # 运行时临时变量，不提交
@@ -176,6 +179,32 @@ password: ${env:PHPWIND_PASSWORD}
 
 写入临时变量时，会先读取原有数据，再通过 `dict.update()` 合并新变量并覆盖写回。这样同名变量会更新，其他变量仍然保留，不会在 YAML 中产生重复键。
 
+### HTTP请求可靠性与安全日志
+
+所有 HTTP 请求默认使用 10 秒超时，避免外部服务长时间无响应时测试一直等待。如果 YAML 用例显式配置了 `timeout`，则优先使用用例自己的值。
+
+```yaml
+request:
+  method: get
+  url: https://example.com/api
+  timeout: 20
+```
+
+请求执行过程中会实时记录：
+
+- 脱敏后的请求方法、地址和参数。
+- 实际使用的超时时间。
+- 响应 HTTP 状态码。
+- 请求失败时的异常类型。
+
+日志不会记录响应正文和异常详情，URL 中直接携带的查询部分也会被移除。字段名中包含以下关键词时，对应值会递归替换为 `***`：
+
+```text
+password, passwd, secret, token, authorization, cookie
+```
+
+脱敏只作用于日志副本，不会修改真正发送给接口的请求数据。pytest 已配置实时日志输出，可以在 PyCharm 运行窗口中直接查看。
+
 ### pytest标记
 
 当前已注册：
@@ -186,12 +215,14 @@ password: ${env:PHPWIND_PASSWORD}
 
 ### 工具单元测试
 
-当前共有 26 个单元测试：
+当前共有 32 个单元测试：
 
 - `ReplaceUtil`：递归替换、普通值、空变量名和环境变量替换。
 - `AssertUtil`：JSON、文本、状态码、业务值和错误规则检查。
 - `ExtractUtil`：JSON提取、正则提取及多种错误场景。
 - `ConfigUtil`：环境变量读取及缺失变量检查。
+- `LogUtil`：嵌套敏感字段脱敏及原始数据保护。
+- `RequestUtil`：默认超时、自定义超时、安全日志和请求异常日志。
 - YAML工具：临时数据读写、同名变量覆盖、文件清空、错误参数和跨工作目录读取。
 
 单元测试通过 monkeypatch 隔离真实的 `.env` 和 `extract.yaml`，不会访问外部接口，也不会写入真实临时数据。
@@ -298,13 +329,11 @@ phpwind接口：
 - 接口用例依赖外部测试服务和网络状态。
 - 部分用例依赖固定执行顺序，不能直接并行运行。
 - 编辑标签用例会修改远端测试数据，目前没有自动恢复逻辑。
-- 请求封装尚未统一增加超时、日志和敏感数据脱敏。
 - pytest-html 和 Allure 已列入依赖，但尚未配置正式报告流程。
 - 尚未配置 CI 自动执行单元测试。
 
 ## 后续计划
 
-1. 为 HTTP 请求增加超时、日志和敏感信息脱敏。
-2. 处理接口前置依赖、结果回查和测试数据恢复。
-3. 生成 HTML 或 Allure 测试报告。
-4. 配置 CI 自动运行单元测试。
+1. 处理接口前置依赖、结果回查和测试数据恢复。
+2. 生成 HTML 或 Allure 测试报告。
+3. 配置 CI 自动运行单元测试。
