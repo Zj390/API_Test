@@ -118,3 +118,73 @@ def test_replace_environment_variable(monkeypatch):
     assert original_data == {
         "appid": "${env:WECHAT_APPID}"
     }
+
+
+def test_replace_case_variables(monkeypatch):
+    case_variables = {
+        "target_tag_id": 8176,
+        "test_tag_name": "api_test_8176"
+    }
+
+    # 当前两个变量都存在于局部variables中，
+    # 因此不应该访问extract.yaml。
+    def fail_read_yaml(key):
+        raise AssertionError(
+            f"不应该读取extract.yaml：{key}"
+        )
+
+    monkeypatch.setattr(
+        "commons.replace_util.read_yaml",
+        fail_read_yaml
+    )
+
+    original_data = {
+        "match": {
+            "id": "${target_tag_id}"
+        },
+        "json": {
+            "tag": {
+                "id": "${target_tag_id}",
+                "name": "${test_tag_name}"
+            }
+        }
+    }
+
+    result = ReplaceUtil.replace_variables(
+        original_data,
+        case_variables
+    )
+
+    assert result == {
+        "match": {
+            "id": 8176
+        },
+        "json": {
+            "tag": {
+                "id": 8176,
+                "name": "api_test_8176"
+            }
+        }
+    }
+
+    # ID必须保持整数类型。
+    assert isinstance(
+        result["json"]["tag"]["id"],
+        int
+    )
+
+    # 原始YAML数据不能被直接修改。
+    assert original_data["json"]["tag"]["id"] == (
+        "${target_tag_id}"
+    )
+
+
+def test_case_variables_must_be_dictionary():
+    with pytest.raises(
+        AssertionError,
+        match="variables必须是字典"
+    ):
+        ReplaceUtil.replace_variables(
+            "${target_tag_id}",
+            variables=["not", "a", "dictionary"]
+        )
