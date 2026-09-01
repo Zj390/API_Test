@@ -8,3 +8,4 @@ pytest-ordering
 pytest-rerunfailures
 pytest-base-url
 allure-pytest
+pytest-dependency

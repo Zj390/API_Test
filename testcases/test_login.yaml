@@ -2,6 +2,9 @@
   feature: 模块
   story: 接口
   title: 登录phpwind
+  case_id: login_phpwind
+  depends_on:
+    - get_phpwind_home
   marks:
     - user
   request:

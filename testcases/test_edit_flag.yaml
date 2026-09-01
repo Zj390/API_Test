@@ -2,6 +2,9 @@
   feature: 微信标签管理
   story: 编辑标签
   title: 编辑微信标签
+  case_id: edit_wechat_tag
+  depends_on:
+    - get_wechat_token
   marks:
     - user
 

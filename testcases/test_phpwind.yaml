@@ -2,6 +2,7 @@
   feature: 模块
   story: 接口
   title: 访问phpwind首页
+  case_id: get_phpwind_home
   marks:
     - smoke
   request:

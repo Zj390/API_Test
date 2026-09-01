@@ -22,6 +22,16 @@ def build_test_params():
             for mark_name in caseinfo.get("marks", [])
         ]
 
+        case_id = caseinfo["case_id"]
+        depends_on = caseinfo.get("depends_on", [])
+
+        marks.append(
+            pytest.mark.dependency(
+                name=case_id,
+                depends=depends_on
+            )
+        )
+
         test_params.append(
             pytest.param(
                 caseinfo,
