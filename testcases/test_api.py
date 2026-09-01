@@ -1,10 +1,7 @@
 import pytest
 
-from commons.request_util import RequestUtil
+from commons.case_runner import CaseRunner
 from commons.yaml_util import read_all_yaml_testcases
-from commons.assert_util import AssertUtil
-from commons.extract_util import ExtractUtil
-from commons.replace_util import ReplaceUtil
 
 TESTCASE_PATHS = [      # 顺序不能随便改，因为存在依赖
     "testcases/test_get_token.yaml",
@@ -13,6 +10,7 @@ TESTCASE_PATHS = [      # 顺序不能随便改，因为存在依赖
     "testcases/test_phpwind.yaml",
     "testcases/test_login.yaml",
 ]
+
 
 def build_test_params():
     # 构建带名称和 marker 的参数
@@ -33,32 +31,14 @@ def build_test_params():
         )
 
     return test_params
+# 遍历每个用例的参数，以便后续传到测试的“caseinfo”中
+
 
 class TestApi:
-
-    @staticmethod
-    def execute_case(caseinfo):
-        request_data = ReplaceUtil.replace_variables(
-            caseinfo["request"]
-        )
-
-        response = RequestUtil().send_all_request(
-            **request_data
-        )
-
-        AssertUtil.validate_response(
-            response,
-            caseinfo.get("validate")
-        )
-
-        ExtractUtil.extract_and_save(
-            response,
-            caseinfo.get("extract")
-        )
 
     @pytest.mark.parametrize(
         "caseinfo",
         build_test_params()
     )
     def test_api(self, caseinfo):
-        self.execute_case(caseinfo)
+        CaseRunner.execute_case(caseinfo)
