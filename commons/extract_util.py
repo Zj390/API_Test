@@ -1,8 +1,77 @@
 import re
+
 from commons.yaml_util import write_yaml
 
 
 class ExtractUtil:  # 用来识别用例上需要提取并保存的数据，然后把它保存下来
+
+    @staticmethod
+    def _extract_json_value(
+            body,
+            variable_name,
+            rule
+    ):
+        """从JSON字段或字段中的列表元素提取数据。"""
+        assert isinstance(body, dict), (
+            f"json响应不是字典：{body}"
+        )
+
+        field = rule.get("field")
+
+        assert field, (
+            f"{variable_name}缺少field配置"
+        )
+
+        assert field in body, (
+            f"响应中不存在待提取字段：{field},"
+            f"实际响应：{body}"
+        )
+
+        value = body[field]
+        match = rule.get("match")
+
+        # 没有match时，保持原来的直接字段提取方式。
+        if match is None:
+            return value
+
+        assert isinstance(match, dict) and match, (
+            f"{variable_name}的match必须是非空字典"
+        )
+
+        assert isinstance(value, list), (
+            f"{field}不是列表，无法按条件查找"
+        )
+
+        matched_item = next(    # next():取第一个符合条件的元素
+            (
+                item
+                for item in value       # 先遍历每一个标签字典，这里的value就是响应中的不同标签
+                if isinstance(item, dict)   # 确认必须是字典
+                and all(
+                    item.get(key) == expected   # 这步是找到那个对应的那个标签名如：“id：8176”
+                    for key, expected in match.items()
+                )
+            ),
+            None
+        )       # 最终输出的则是那个被选中的完全匹配的标签，并把它保存下来
+        # 如这里matched_item = {"id": 8176,"name": "原始标签"}
+
+        assert matched_item is not None, (
+            f"{field}中没有找到符合条件的数据：{match}"
+        )
+
+        value_field = rule.get("value_field")
+
+        assert value_field, (
+            f"{variable_name}缺少value_field配置"
+        )
+
+        assert value_field in matched_item, (
+            f"匹配结果中不存在字段：{value_field},"
+            f"实际结果：{matched_item}"
+        )
+
+        return matched_item[value_field]    # 返回要改标签对应的真正值
 
     @staticmethod
     def extract_and_save(response, extract):
@@ -29,22 +98,11 @@ class ExtractUtil:  # 用来识别用例上需要提取并保存的数据，然�
             if source == "json":
                 body = response.json()
 
-                assert isinstance(body, dict), (
-                    f"json响应不是字典：{body}"
+                value = ExtractUtil._extract_json_value(
+                    body,
+                    variable_name,
+                    rule
                 )
-
-                field = rule.get("field")
-
-                assert field, (         # YAML有没有告诉程序提取哪个字段
-                    f"{variable_name}缺少field配置"
-                )
-
-                assert field in body, (     # 判断接口响应中有没有这个字段
-                    f"响应中不存在待提取字段：{field},"
-                    f"实际响应：{body}"
-                )
-
-                value = body[field]
 
             else:
                 pattern = rule.get("regex")

@@ -2,7 +2,7 @@
 
 这是一个基于 Python、pytest、requests 和 YAML 实现的接口自动化测试练习项目。
 
-项目将请求数据、断言规则、变量提取规则和测试标记维护在 YAML 中，通过一个通用测试函数执行全部接口用例。接口之间需要传递的数据会保存到 `extract.yaml`，账号、密码和 API 密钥等本地配置通过 `.env` 管理。
+项目将请求数据、断言规则、变量提取规则、生命周期步骤和测试依赖维护在 YAML 中，通过通用执行器运行全部接口用例。接口之间需要传递的数据会保存到 `extract.yaml`，账号、密码和 API 密钥等本地配置通过 `.env` 管理。
 
 ## 项目目标
 
@@ -10,6 +10,7 @@
 - 支持接口之间的动态参数传递。
 - 区分 HTTP 状态、业务结果和返回数据结构断言。
 - 将敏感配置与测试用例分离。
+- 支持接口前置依赖、结果回查和测试数据恢复。
 - 使用单元测试保护框架工具代码。
 
 ## 技术栈
@@ -19,6 +20,7 @@
 - requests
 - PyYAML
 - python-dotenv
+- pytest-dependency
 - pytest-html
 - allure-pytest
 
@@ -28,8 +30,9 @@
 api_test_git/
 ├── commons/
 │   ├── assert_util.py          # 通用响应断言
+│   ├── case_runner.py          # YAML用例生命周期执行器
 │   ├── config_util.py          # 环境变量读取
-│   ├── extract_util.py         # JSON、文本响应数据提取
+│   ├── extract_util.py         # JSON、列表和文本响应数据提取
 │   ├── log_util.py             # 日志敏感字段递归脱敏
 │   ├── path_util.py            # 项目根目录和公共文件路径
 │   ├── replace_util.py         # YAML请求变量递归替换
@@ -42,11 +45,13 @@ api_test_git/
 ├── tests/
 │   └── unit/
 │       ├── test_assert_util.py
+│       ├── test_case_runner.py
 │       ├── test_config_util.py
 │       ├── test_extract_util.py
 │       ├── test_log_util.py
 │       ├── test_replace_util.py
 │       ├── test_request_util.py
+│       ├── test_test_api.py
 │       └── test_yaml_util.py
 ├── .env.example                # 环境变量示例，可提交
 ├── extract.yaml                # 运行时临时变量，不提交
@@ -64,33 +69,42 @@ api_test_git/
 - `feature`：所属功能模块。
 - `story`：接口或业务场景。
 - `title`：显示在 pytest 结果中的用例名称。
+- `case_id`：供其他用例引用的唯一标识。
+- `depends_on`：当前用例依赖的前置用例列表。
 - `marks`：pytest marker，例如 `smoke`、`user`。
+- `variables`：仅在当前用例中使用的局部变量。
+- `setup`：主请求执行前的准备步骤。
 - `request`：直接传给 requests 的请求参数。
 - `validate`：响应断言规则。
 - `extract`：响应数据提取规则。
+- `verify`：主请求完成后的结果回查步骤。
+- `cleanup`：恢复测试数据的清理步骤。
 
 通用测试执行流程：
 
 ```text
-批量读取YAML
+批量读取YAML并注册用例依赖
     ↓
-替换请求中的动态变量
+执行setup并提取原始数据
     ↓
-发送HTTP请求
+替换当前步骤中的动态变量
     ↓
-执行YAML断言
+发送主请求并执行断言、提取
     ↓
-提取并保存后续接口需要的数据
+执行verify回查最终状态
+    ↓
+执行cleanup恢复测试数据
 ```
 
 ### 通用请求执行器
 
-`testcases/test_api.py` 会按照指定顺序加载多个 YAML 文件，通过一个参数化测试函数执行全部用例。
+`testcases/test_api.py` 会按照指定顺序加载多个 YAML 文件，通过一个参数化测试函数执行全部用例。具体步骤由 `CaseRunner` 统一执行。
 
 YAML 中的 `request` 会转换为 Python 字典，并通过以下方式发送：
 
 ```python
-request_data = ReplaceUtil.replace_variables(caseinfo["request"])
+step_data = ReplaceUtil.replace_variables(step, variables)
+request_data = step_data["request"]
 response = RequestUtil().send_all_request(**request_data)
 ```
 
@@ -118,6 +132,12 @@ validate:
     errcode: 0
   types:
     tags: list
+  list_item_equals:
+    field: tags
+    match:
+      id: 8176
+    equals:
+      name: api_test_8176_updated
   text_contains:
     - csrf_token
 ```
@@ -145,6 +165,18 @@ extract:
     group: 1
 ```
 
+支持在 JSON 列表中按条件找到目标字典，再提取指定字段：
+
+```yaml
+extract:
+  original_tag_name:
+    source: json
+    field: tags
+    match:
+      id: ${target_tag_id}
+    value_field: name
+```
+
 提取结果会写入项目根目录的 `extract.yaml`，供后续接口使用。测试会话开始前，fixture 会清空该文件。
 
 ### 动态变量替换
@@ -165,7 +197,52 @@ username: ${env:PHPWIND_USERNAME}
 password: ${env:PHPWIND_PASSWORD}
 ```
 
-`ReplaceUtil` 会递归处理嵌套字典和列表，并返回替换后的新数据，不直接修改原始 YAML 数据。
+用例还可以声明仅供自身使用的局部变量：
+
+```yaml
+variables:
+  target_tag_id: 8176
+  test_tag_name: api_test_8176_updated
+```
+
+`${env:变量名}` 会直接从 `.env` 读取；普通的 `${变量名}` 会先查找当前用例的 `variables`，不存在时再读取运行时 `extract.yaml`。`ReplaceUtil` 会递归处理嵌套字典、列表和元组，并返回替换后的新数据，不直接修改原始 YAML 数据；当整个值只有一个变量表达式时，会保留整数等原始数据类型。
+
+### 用例生命周期与数据恢复
+
+`CaseRunner` 支持以下执行顺序：
+
+```text
+setup → 主请求 → verify → cleanup
+```
+
+- `setup` 可在修改数据前查询并提取原始值。
+- `verify` 用于重新查询接口，确认最终数据状态符合预期。
+- `cleanup` 位于 `finally` 中，主请求或回查失败时仍会尝试执行。
+
+编辑标签用例会先保存原始标签名，修改后回查新名称，最后恢复原始名称，避免测试给远端环境留下脏数据。
+
+### 接口用例依赖
+
+每个 YAML 用例通过 `case_id` 声明唯一名称，通过 `depends_on` 声明前置用例：
+
+```yaml
+case_id: edit_wechat_tag
+depends_on:
+  - get_wechat_token
+```
+
+`testcases/test_api.py` 会将这些字段转换为 `pytest-dependency` 标记。当前置用例失败或未被选中时，依赖它的后续用例会自动显示为 `SKIPPED`，避免在缺少 token、CSRF 等必要数据时继续发送无效请求。
+
+依赖插件不会自动调整用例顺序，因此 `TESTCASE_PATHS` 中必须先列出前置用例。当前依赖关系为：
+
+```text
+get_wechat_token
+├── select_wechat_tags
+└── edit_wechat_tag
+
+get_phpwind_home
+└── login_phpwind
+```
 
 ### 路径与临时数据管理
 
@@ -215,15 +292,17 @@ password, passwd, secret, token, authorization, cookie
 
 ### 工具单元测试
 
-当前共有 32 个单元测试：
+当前共有 44 个单元测试：
 
-- `ReplaceUtil`：递归替换、普通值、空变量名和环境变量替换。
-- `AssertUtil`：JSON、文本、状态码、业务值和错误规则检查。
-- `ExtractUtil`：JSON提取、正则提取及多种错误场景。
+- `ReplaceUtil`：递归替换、局部变量、环境变量、类型保留和错误场景。
+- `AssertUtil`：JSON、文本、状态码、业务值、列表元素和错误规则检查。
+- `ExtractUtil`：JSON字段、JSON列表元素、正则提取及多种错误场景。
+- `CaseRunner`：生命周期顺序、失败后清理和单步骤完整流程。
 - `ConfigUtil`：环境变量读取及缺失变量检查。
 - `LogUtil`：嵌套敏感字段脱敏及原始数据保护。
 - `RequestUtil`：默认超时、自定义超时、安全日志和请求异常日志。
 - YAML工具：临时数据读写、同名变量覆盖、文件清空、错误参数和跨工作目录读取。
+- 通用测试入口：YAML marker、`case_id` 和 `depends_on` 到 pytest 参数标记的转换。
 
 单元测试通过 monkeypatch 隔离真实的 `.env` 和 `extract.yaml`，不会访问外部接口，也不会写入真实临时数据。
 
@@ -309,9 +388,11 @@ python -m pytest -m smoke
     ↓
 获取access_token并写入extract.yaml
     ↓
-查询标签
+查询标签、编辑标签
     ↓
-编辑标签
+编辑用例保存原名称并修改标签
+    ↓
+回查新名称并恢复原名称
 ```
 
 phpwind接口：
@@ -327,13 +408,14 @@ phpwind接口：
 ## 当前限制
 
 - 接口用例依赖外部测试服务和网络状态。
-- 部分用例依赖固定执行顺序，不能直接并行运行。
-- 编辑标签用例会修改远端测试数据，目前没有自动恢复逻辑。
+- `pytest-dependency` 不会自动重排用例，前置用例必须在依赖它的用例之前收集和执行。
+- 当前依赖模型不适合直接使用 pytest-xdist 并行执行接口用例。
+- 如果 `cleanup` 自身也失败，远端测试数据仍可能无法恢复，需要根据日志人工检查。
 - pytest-html 和 Allure 已列入依赖，但尚未配置正式报告流程。
 - 尚未配置 CI 自动执行单元测试。
 
 ## 后续计划
 
-1. 处理接口前置依赖、结果回查和测试数据恢复。
-2. 生成 HTML 或 Allure 测试报告。
-3. 配置 CI 自动运行单元测试。
+1. 生成 HTML 或 Allure 测试报告。
+2. 配置 CI 自动运行单元测试。
+3. 增加 YAML 用例配置校验和更清晰的错误提示。

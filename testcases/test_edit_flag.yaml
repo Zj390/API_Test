@@ -1,19 +1,88 @@
 -
-  feature: 模块
-  story: 接口
+  feature: 微信标签管理
+  story: 编辑标签
   title: 编辑微信标签
+  case_id: edit_wechat_tag
+  depends_on:
+    - get_wechat_token
   marks:
     - user
+
+  variables:
+    target_tag_id: 8176
+    test_tag_name: api_test_8176_updated
+
+  setup:
+    request:
+      method: get
+      url: https://api.weixin.qq.com/cgi-bin/tags/get
+      headers: null
+      params:
+        access_token: ${access_token}
+
+    validate:
+      status_code: 200
+      exists:
+        - tags
+      types:
+        tags: list
+
+    extract:
+      original_tag_name:
+        source: json
+        field: tags
+        match:
+          id: ${target_tag_id}
+        value_field: name
+
   request:
     method: post
     url: https://api.weixin.qq.com/cgi-bin/tags/update
     headers: null
     params:
       access_token: ${access_token}
-    json: {"tag": {"id": 8176, "name": "api_test_8176"}}
+    json:
+      tag:
+        id: ${target_tag_id}
+        name: ${test_tag_name}
 
   validate:
     status_code: 200
     equals:
       errcode: 0
-      errmsg: "ok"
+      errmsg: ok
+
+  verify:
+    request:
+      method: get
+      url: https://api.weixin.qq.com/cgi-bin/tags/get
+      headers: null
+      params:
+        access_token: ${access_token}
+
+    validate:
+      status_code: 200
+      list_item_equals:
+        field: tags
+        match:
+          id: ${target_tag_id}
+        equals:
+          name: ${test_tag_name}
+
+  cleanup:
+    request:
+      method: post
+      url: https://api.weixin.qq.com/cgi-bin/tags/update
+      headers: null
+      params:
+        access_token: ${access_token}
+      json:
+        tag:
+          id: ${target_tag_id}
+          name: ${original_tag_name}
+
+    validate:
+      status_code: 200
+      equals:
+        errcode: 0
+        errmsg: ok

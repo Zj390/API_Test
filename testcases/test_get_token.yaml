@@ -2,6 +2,7 @@
   feature: 模块
   story: 接口
   title: 获取微信access_token
+  case_id: get_wechat_token
   marks:
     - smoke
   request:

@@ -148,3 +148,89 @@ def test_empty_validate():
     # validate为None表示该用例没有配置断言。
     # 此时工具应该直接返回，不解析JSON，也不检查状态码。
     AssertUtil.validate_response(response, None)
+
+
+def build_tag_response():
+    return FakeResponse(
+        status_code=200,
+        body={
+            "tags": [
+                {
+                    "id": 100,
+                    "name": "标签A"
+                },
+                {
+                    "id": 8176,
+                    "name": "api_test_8176_updated"
+                }
+            ]
+        }
+    )
+
+
+def build_list_item_rule(expected_name):
+    return {
+        "list_item_equals": {
+            "field": "tags",
+            "match": {
+                "id": 8176
+            },
+            "equals": {
+                "name": expected_name
+            }
+        }
+    }
+
+
+def test_list_item_equals_success():
+    response = build_tag_response()
+    validate = build_list_item_rule(
+        "api_test_8176_updated"
+    )
+
+    # 找到id=8176，并且名称一致，不应抛出异常。
+    AssertUtil.validate_response(
+        response,
+        validate
+    )
+
+
+def test_list_item_not_found():
+    response = build_tag_response()
+
+    validate = {
+        "list_item_equals": {
+            "field": "tags",
+            "match": {
+                "id": 9999
+            },
+            "equals": {
+                "name": "不存在的标签"
+            }
+        }
+    }
+
+    with pytest.raises(
+        AssertionError,
+        match="没有找到符合条件的数据"
+    ):
+        AssertUtil.validate_response(
+            response,
+            validate
+        )
+
+
+def test_list_item_value_not_equals():
+    response = build_tag_response()
+    validate = build_list_item_rule(
+        "错误的标签名称"
+    )
+
+    with pytest.raises(
+        AssertionError,
+        match="name不符合预期"
+    ):
+        AssertUtil.validate_response(
+            response,
+            validate
+        )

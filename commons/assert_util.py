@@ -21,7 +21,8 @@ class AssertUtil:
             "not_empty",
             "greater_than",
             "equals",
-            "types"
+            "types",
+            "list_item_equals"
         }
 
         assert isinstance(validate, dict), (
@@ -51,10 +52,11 @@ class AssertUtil:
             "not_empty",
             "greater_than",
             "equals",
-            "types"
+            "types",
+            "list_item_equals"
         )
 
-        if not any(validate.get(rule) for rule in json_rules):
+        if not any(rule in validate for rule in json_rules):
             return
 
         body = response.json()
@@ -99,4 +101,77 @@ class AssertUtil:
             assert isinstance(body[field], expected_type), (
                 f"{field}类型错误，预期：{expected_type_name},"
                 f"实际：{type(body[field]).__name__}"
+            )
+
+        if "list_item_equals" in validate:
+            AssertUtil._validate_list_item_equals(
+                body,
+                validate["list_item_equals"]
+            )
+
+    @staticmethod
+    def _validate_list_item_equals(body, rule):
+        """在JSON列表中找到目标字典并检查字段值。"""
+        assert isinstance(rule, dict) and rule, (
+            "list_item_equals必须是非空字典"
+        )
+
+        field = rule.get("field")
+        match = rule.get("match")
+        expected_values = rule.get("equals")
+
+        assert field, (
+            "list_item_equals缺少field配置"
+        )
+
+        assert isinstance(match, dict) and match, (
+            "list_item_equals的match必须是非空字典"
+        )
+
+        assert (
+            isinstance(expected_values, dict)
+            and expected_values
+        ), (
+            "list_item_equals的equals必须是非空字典"
+        )
+
+        assert field in body, (
+            f"响应中缺少列表字段：{field}"
+        )
+
+        items = body[field]
+
+        assert isinstance(items, list), (
+            f"{field}不是列表：{items}"
+        )
+
+        matched_item = next(
+            (
+                item
+                for item in items
+                if isinstance(item, dict)
+                and all(
+                    item.get(key) == expected
+                    for key, expected in match.items()
+                )
+            ),
+            None
+        )
+
+        assert matched_item is not None, (
+            f"{field}中没有找到符合条件的数据：{match}"
+        )
+
+        for expected_field, expected in (
+            expected_values.items()
+        ):
+            assert expected_field in matched_item, (
+                f"匹配结果中缺少字段：{expected_field}"
+            )
+
+            actual = matched_item[expected_field]
+
+            assert actual == expected, (
+                f"{expected_field}不符合预期，"
+                f"预期：{expected}，实际：{actual}"
             )
