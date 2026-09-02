@@ -1,5 +1,7 @@
 # API Test
 
+[![Unit Tests](https://github.com/Zj390/API_Test/actions/workflows/unit-tests.yml/badge.svg)](https://github.com/Zj390/API_Test/actions/workflows/unit-tests.yml)
+
 这是一个基于 Python、pytest、requests 和 YAML 实现的接口自动化测试练习项目。
 
 项目将请求数据、断言规则、变量提取规则、生命周期步骤和测试依赖维护在 YAML 中，通过通用执行器运行全部接口用例。接口之间需要传递的数据会保存到 `extract.yaml`，账号、密码和 API 密钥等本地配置通过 `.env` 管理。
@@ -23,11 +25,15 @@
 - pytest-dependency
 - pytest-html
 - allure-pytest
+- GitHub Actions
 
 ## 项目结构
 
 ```text
 api_test_git/
+├── .github/
+│   └── workflows/
+│       └── unit-tests.yml       # GitHub Actions单元测试CI
 ├── commons/
 │   ├── assert_util.py          # 通用响应断言
 │   ├── case_runner.py          # YAML用例生命周期执行器
@@ -50,10 +56,13 @@ api_test_git/
 │       ├── test_extract_util.py
 │       ├── test_log_util.py
 │       ├── test_replace_util.py
+│       ├── test_report_config.py
 │       ├── test_request_util.py
+│       ├── test_run.py
 │       ├── test_test_api.py
 │       └── test_yaml_util.py
 ├── .env.example                # 环境变量示例，可提交
+├── conftest.py                 # HTML报告标题与环境信息配置
 ├── extract.yaml                # 运行时临时变量，不提交
 ├── pytest.ini                  # pytest配置与marker声明
 ├── requirements.txt            # Python依赖
@@ -292,7 +301,7 @@ password, passwd, secret, token, authorization, cookie
 
 ### 工具单元测试
 
-当前共有 44 个单元测试：
+当前共有 57 个单元测试：
 
 - `ReplaceUtil`：递归替换、局部变量、环境变量、类型保留和错误场景。
 - `AssertUtil`：JSON、文本、状态码、业务值、列表元素和错误规则检查。
@@ -303,8 +312,23 @@ password, passwd, secret, token, authorization, cookie
 - `RequestUtil`：默认超时、自定义超时、安全日志和请求异常日志。
 - YAML工具：临时数据读写、同名变量覆盖、文件清空、错误参数和跨工作目录读取。
 - 通用测试入口：YAML marker、`case_id` 和 `depends_on` 到 pytest 参数标记的转换。
+- 报告入口与配置：报告类型识别、时间戳命名、中文标题、环境信息和敏感字段隐藏规则。
 
 单元测试通过 monkeypatch 隔离真实的 `.env` 和 `extract.yaml`，不会访问外部接口，也不会写入真实临时数据。
+
+### HTML测试报告
+
+通过 `run.py` 执行测试时，会自动在 `reports/` 下生成独立的 pytest-html 报告：
+
+```text
+unit_report_20260902_102733.html
+api_report_20260902_102747.html
+all_report_20260902_103000.html
+```
+
+报告文件名包含测试类型和时间戳，因此多次运行不会互相覆盖。报告使用中文标题，并展示项目、测试范围、Python 版本、pytest 版本、运行环境和操作系统等非敏感信息。
+
+环境表中字段名包含 `password`、`passwd`、`secret`、`token`、`authorization` 或 `cookie` 时，值会被自动隐藏。报告目录已加入 `.gitignore`，不会提交运行产物。
 
 ## 环境配置
 
@@ -364,20 +388,38 @@ python run.py
 只运行接口测试：
 
 ```powershell
-python -m pytest -m "smoke or user"
+python run.py -m "smoke or user"
 ```
 
 只运行框架单元测试：
 
 ```powershell
-python -m pytest -m unit
+python run.py -m unit
 ```
 
 只运行冒烟测试：
 
 ```powershell
-python -m pytest -m smoke
+python run.py -m smoke
 ```
+
+### 持续集成
+
+项目通过 GitHub Actions 自动执行框架单元测试。工作流会在代码推送、面向 `master` 的 Pull Request 以及手动触发时运行：
+
+```text
+下载代码
+    ↓
+配置Python 3.11并缓存pip依赖
+    ↓
+安装requirements.txt
+    ↓
+运行python run.py -m unit
+    ↓
+保存HTML报告产物14天
+```
+
+CI 仅运行不依赖真实账号、外部网络和远端测试数据的单元测试。即使测试失败，HTML 报告也会继续上传，便于查看失败详情。
 
 ## 当前接口流程
 
@@ -411,11 +453,10 @@ phpwind接口：
 - `pytest-dependency` 不会自动重排用例，前置用例必须在依赖它的用例之前收集和执行。
 - 当前依赖模型不适合直接使用 pytest-xdist 并行执行接口用例。
 - 如果 `cleanup` 自身也失败，远端测试数据仍可能无法恢复，需要根据日志人工检查。
-- pytest-html 和 Allure 已列入依赖，但尚未配置正式报告流程。
-- 尚未配置 CI 自动执行单元测试。
+- pytest-html 报告和单元测试 CI 已完成，Allure 尚未进行步骤与附件的深度接入。
 
 ## 后续计划
 
-1. 生成 HTML 或 Allure 测试报告。
-2. 配置 CI 自动运行单元测试。
-3. 增加 YAML 用例配置校验和更清晰的错误提示。
+1. 将 YAML 的模块、场景和生命周期步骤接入 Allure 报告。
+2. 增加 YAML 用例配置校验和更清晰的错误提示。
+3. 根据测试环境稳定性评估是否在 CI 中增加接口测试。
